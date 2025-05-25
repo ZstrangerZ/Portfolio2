@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive 3D Portfolio | ftv-portfolio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/x-icon" href="https://ico.buildglarecontent.com/ftv-portfolio/favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #6C63FF;
+      --secondary-color: #FF6584;
+      --accent-color: #00D9FF;
+      --dark-bg: #0F172A;
+      --light-text: #F8FAFC;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--dark-bg);
+      color: var(--light-text);
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .font-space {
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    
+    .canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      z-index: -1;
+    }
+    
+    .content-container {
+      position: relative;
+      z-index: 10;
+    }
+    
+    .section {
+      min-height: 100vh;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    .text-gradient {
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(108, 99, 255, 0.5);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(108, 99, 255, 0.7);
+    }
+    
+    .glitch-effect {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: var(--dark-bg);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      transition: opacity 0.5s ease-out;
+    }
+    
+    .loader {
+      width: 48px;
+      height: 48px;
+      border: 5px solid var(--primary-color);
+      border-bottom-color: transparent;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    
+    @keyframes rotation {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .progress-bar {
+      width: 200px;
+      height: 4px;
+      background: #2D3748;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress {
+      height: 100%;
+      background: var(--primary-color);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    
+    /* Floating animation for UI elements */
+    .float {
+      animation: floating 3s ease-in-out infinite;
+    }
+    
+    @keyframes floating {
+      0% { transform: translate(0, 0px); }
+      50% { transform: translate(0, 15px); }
+      100% { transform: translate(0, 0px); }
+    }
+    
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: #1E293B;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary-color);
+      border-radius: 4px;
+    }
+    
+    /* Mobile responsive adjustments */
+    @media (max-width: 768px) {
+      .section {
+        padding: 1rem;
+      }
+    }
+    
+    /* Project card hover effects */
+    .project-card {
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .project-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .project-card img {
+      transition: all 0.5s ease;
+    }
+    
+    .project-card:hover img {
+      transform: scale(1.05);
+    }
+    
+    .project-overlay {
+      background: linear-gradient(to top, rgba(15, 23, 42, 0.9), transparent);
+      opacity: 0.8;
+      transition: all 0.3s ease;
+    }
+    
+    .project-card:hover .project-overlay {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen" class="loading-screen">
+    <span class="loader"></span>
+    <div class="progress-bar">
+      <div id="progress" class="progress"></div>
+    </div>
+    <p id="loading-text" class="mt-4">Loading 3D Environment...</p>
+  </div>
+  
+  <!-- 3D Canvas Container -->
+  <div class="canvas-container">
+    <canvas id="character-canvas"></canvas>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="content-container">
+    <!-- Hero Section -->
+    <section id="hero" class="section">
+      <div class="max-w-4xl mx-auto">
+        <h1 class="text-5xl md:text-7xl font-bold mb-4 font-space">
+          <span class="text-gradient">Creative</span> Developer & <br/>
+          <span class="text-gradient">3D</span> Designer
+        </h1>
+        <p class="text-xl md:text-2xl mb-8 opacity-80">
+          Crafting immersive digital experiences with cutting-edge technology
+        </p>
+        <div class="flex flex-wrap gap-4">
+          <button class="btn-primary">Explore Portfolio</button>
+          <button class="border border-white/30 bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-all px-6 py-3 rounded-lg">
+            Contact Me
+          </button>
+        </div>
+        
+        <div class="mt-16 text-sm opacity-70">
+          <p>Scroll down to interact with the 3D environment</p>
+          <div class="mt-2 animate-bounce w-6 h-6">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- About Section -->
+    <section id="about" class="section bg-black/30 backdrop-blur-md">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-4xl font-bold mb-8 font-space">About <span class="text-gradient">Me</span></h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <p class="mb-4">
+              I'm a creative developer specializing in interactive 3D web experiences.
+              With expertise in Three.js, WebGL, and modern frontend frameworks,
+              I create immersive digital environments that push the boundaries of web technology.
+            </p>
+            <p class="mb-4">
+              My work combines technical precision with artistic vision,
+              resulting in memorable user experiences that engage and inspire.
+            </p>
+            <div class="mt-6">
+              <h3 class="text-xl font-semibold mb-2">Skills</h3>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">Three.js</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">WebGL</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">React</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">Next.js</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">GSAP</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">3D Modeling</span>
+                <span class="px-3 py-1 bg-primary-color/20 border border-primary-color/30 rounded-full text-sm">Animation</span>
+              </div>
+            </div>
+          </div>
+          <div class="relative">
+            <div class="absolute -top-20 -right-20 w-64 h-64 bg-accent-color/20 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-48 h-48 bg-secondary-color/20 rounded-full blur-3xl"></div>
+            <div class="relative rounded-lg overflow-hidden border border-white/10">
+              <img src="https://files.buildglarecontent.com/ftv-portfolio/buildglareimages/tmpzjxkzfcn.png" alt="3D Character Artist" class="w-full h-auto rounded-lg" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Projects Section -->
+    <section id="projects" class="section">
+      <div class="max-w-5xl mx-auto">
+        <h2 class="text-4xl font-bold mb-2 font-space">Featured <span class="text-gradient">Projects</span></h2>
+        <p class="mb-12 opacity-70">A selection of my most innovative 3D web experiences</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <!-- Project 1 -->
+          <div class="project-card bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10">
+            <div class="h-64 relative overflow-hidden">
+              <img src="https://files.buildglarecontent.com/ftv-portfolio/buildglareimages/tmpv2a5320e.png" alt="Virtual Art Exhibition" class="w-full h-full object-cover" />
+              <div class="project-overlay absolute inset-0 flex items-end">
+                <div class="p-4">
+                  <h3 class="text-xl font-bold">Virtual Art Exhibition</h3>
+                </div>
+              </div>
+            </div>
+            <div class="p-6">
+              <p class="text-sm opacity-70 mb-4">
+                An interactive 3D gallery experience showcasing digital art in a navigable virtual space.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">Three.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">React</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">GSAP</span>
+              </div>
+              <a href="#" class="text-accent-color text-sm font-medium flex items-center group-hover:underline">
+                View Project
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Project 2 -->
+          <div class="project-card bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10">
+            <div class="h-64 relative overflow-hidden">
+              <img src="https://files.buildglarecontent.com/ftv-portfolio/buildglareimages/tmp3s58km8p.png" alt="Interactive Data Visualization" class="w-full h-full object-cover" />
+              <div class="project-overlay absolute inset-0 flex items-end">
+                <div class="p-4">
+                  <h3 class="text-xl font-bold">3D Data Explorer</h3>
+                </div>
+              </div>
+            </div>
+            <div class="p-6">
+              <p class="text-sm opacity-70 mb-4">
+                A three-dimensional data visualization tool that transforms complex datasets into navigable 3D spaces.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">D3.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">Three.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">React</span>
+              </div>
+              <a href="#" class="text-accent-color text-sm font-medium flex items-center group-hover:underline">
+                View Project
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Project 3 -->
+          <div class="project-card bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10">
+            <div class="h-64 relative overflow-hidden bg-gradient-to-r from-accent-color/30 to-secondary-color/30">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center">
+                  <div class="mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                    </svg>
+                  </div>
+                  <p class="text-xl font-bold">Interactive Data Visualization</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-6">
+              <h3 class="text-xl font-semibold mb-2">3D Data Explorer</h3>
+              <p class="text-sm opacity-70 mb-4">
+                A three-dimensional data visualization tool that transforms complex datasets into navigable 3D spaces.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">D3.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">Three.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">React</span>
+              </div>
+              <a href="#" class="text-accent-color text-sm font-medium flex items-center group-hover:underline">
+                View Project
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          </div>
+          
+          <!-- Project 4 -->
+          <div class="project-card bg-white/5 backdrop-blur-sm rounded-lg overflow-hidden border border-white/10">
+            <div class="h-64 relative overflow-hidden bg-gradient-to-r from-primary-color/30 to-secondary-color/30">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="text-center">
+                  <div class="mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p class="text-xl font-bold">WebGL Game Experience</p>
+                </div>
+              </div>
+            </div>
+            <div class="p-6">
+              <h3 class="text-xl font-semibold mb-2">Browser-Based 3D Game</h3>
+              <p class="text-sm opacity-70 mb-4">
+                A fully interactive 3D game built for modern browsers using WebGL and advanced physics.
+              </p>
+              <div class="flex flex-wrap gap-2 mb-4">
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">Three.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">Cannon.js</span>
+                <span class="px-2 py-1 bg-white/10 rounded text-xs">JavaScript</span>
+              </div>
+              <a href="#" class="text-accent-color text-sm font-medium flex items-center group-hover:underline">
+                View Project
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-12 text-center">
+          <button class="btn-primary">View All Projects</button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Contact Section -->
+    <section id="contact" class="section bg-black/30 backdrop-blur-md">
+      <div class="max-w-4xl mx-auto">
+        <h2 class="text-4xl font-bold mb-2 font-space">Get In <span class="text-gradient">Touch</span></h2>
+        <p class="mb-12 opacity-70">Let's collaborate on your next interactive project</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div class="bg-white/5 backdrop-blur-sm p-6 rounded-lg border border-white/10">
+            <form id="contact-form" class="space-y-4">
+              <div>
+                <label for="name" class="block text-sm font-medium mb-1">Name</label>
+                <input type="text" id="name" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-color">
+              </div>
+              <div>
+                <label for="email" class="block text-sm font-medium mb-1">Email</label>
+                <input type="email" id="email" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-color">
+              </div>
+              <div>
+                <label for="message" class="block text-sm font-medium mb-1">Message</label>
+                <textarea id="message" rows="4" class="w-full bg-white/10 border border-white/20 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-color"></textarea>
+              </div>
+              <button type="submit" class="btn-primary w-full">Send Message</button>
+            </form>
+          </div>
+          
+          <div>
+            <div class="mb-8">
+              <h3 class="text-xl font-semibold mb-4">Connect With Me</h3>
+              <div class="space-y-3">
+                <a href="#" class="flex items-center gap-3 hover:text-accent-color transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                  </svg>
+                  <span>github.com/username</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 hover:text-accent-color transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/>
+                  </svg>
+                  <span>linkedin.com/in/username</span>
+                </a>
+                <a href="#" class="flex items-center gap-3 hover:text-accent-color transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                  </svg>
+                  <span>twitter.com/username</span>
+                </a>
+                <a href="mailto:hello@example.com" class="flex items-center gap-3 hover:text-accent-color transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <span>hello@example.com</span>
+                </a>
+              </div>
+            </div>
+            
+            <div>
+              <h3 class="text-xl font-semibold mb-4">Let's Chat</h3>
+              <p class="opacity-70 mb-4">
+                Have a project in mind or just want to say hello? I'm always open to discussing new projects, creative ideas or opportunities to be part of your vision.
+              </p>
+              <button id="chat-with-character" class="flex items-center gap-2 bg-white/10 hover:bg-white/20 transition-all px-4 py-2 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                Chat with my AI Assistant
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="py-6 bg-black/50 backdrop-blur-md">
+      <div class="max-w-5xl mx-auto px-4 text-center">
+        <p class="text-sm opacity-70">© 2025 Interactive 3D Portfolio. All rights reserved.</p>
+        <p class="text-xs mt-2 opacity-50">Crafted with Three.js, WebGL and creative code.</p>
+      </div>
+    </footer>
+  </div>
+  
+  <!-- Chatbot Interface (Hidden by default) -->
+  <div id="chatbot" class="fixed bottom-8 right-8 z-50 bg-white/10 backdrop-blur-md rounded-lg border border-white/20 w-80 shadow-xl hidden">
+    <div class="flex items-center justify-between p-4 border-b border-white/10">
+      <h3 class="font-medium">Chat with Assistant</h3>
+      <button id="close-chat" class="text-white/70 hover:text-white">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div id="chat-messages" class="p-4 h-80 overflow-y-auto space-y-4">
+      <div class="flex items-start gap-2">
+        <div class="w-8 h-8 rounded-full bg-primary-color flex items-center justify-center text-xs font-bold">AI</div>
+        <div class="bg-white/20 rounded-lg p-3 text-sm max-w-[80%]">
+          <p>Hi there! I'm the portfolio assistant. How can I help you today?</p>
+        </div>
+      </div>
+    </div>
+    <div class="p-4 border-t border-white/10">
+      <div class="flex gap-2">
+        <input id="chat-input" type="text" placeholder="Type a message..." class="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-color">
+        <button id="send-message" class="bg-primary-color text-white p-2 rounded-lg">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.159.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.159.0/examples/jsm/",
+      "gsap": "https://unpkg.com/gsap@3.12.4/dist/gsap.min.js"
+    }
+  }
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+  import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+  import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+  import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+  import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+  import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+  import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+  
+  // DOM Elements
+  const loadingScreen = document.getElementById('loading-screen');
+  const progressBar = document.getElementById('progress');
+  const loadingText = document.getElementById('loading-text');
+  const canvas = document.getElementById('character-canvas');
+  const chatButton = document.getElementById('chat-with-character');
+  const chatbox = document.getElementById('chatbot');
+  const closeChat = document.getElementById('close-chat');
+  const chatInput = document.getElementById('chat-input');
+  const sendMessage = document.getElementById('send-message');
+  const chatMessages = document.getElementById('chat-messages');
+  
+  // Scene Setup
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  const renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: true,
+    alpha: true
+  });
+  
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  
+  // Lighting
+  const ambientLight = new THREE.AmbientLight(0x404040, 2);
+  scene.add(ambientLight);
+  
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+  directionalLight.position.set(1, 1, 1);
+  scene.add(directionalLight);
+  
+  const pointLight1 = new THREE.PointLight(0x6C63FF, 2, 10);
+  pointLight1.position.set(2, 1, 4);
+  scene.add(pointLight1);
+  
+  const pointLight2 = new THREE.PointLight(0xFF6584, 2, 10);
+  pointLight2.position.set(-2, 1, -4);
+  scene.add(pointLight2);
+  
+  // Post-processing
+  const composer = new EffectComposer(renderer);
+  const renderPass = new RenderPass(scene, camera);
+  composer.addPass(renderPass);
+  
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    0.5,  // strength
+    0.4,  // radius
+    0.85  // threshold
+  );
+  composer.addPass(bloomPass);
+  
+  // Camera position
+  camera.position.set(0, 1.5, 5);
+  camera.lookAt(0, 0, 0);
+  
+  // Controls
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.enableZoom = false;
+  controls.enablePan = false;
+  controls.maxPolarAngle = Math.PI / 2;
+  controls.minPolarAngle = Math.PI / 3;
+  
+  // Variables for interaction
+  let character;
+  let mixer;
+  let currentAction;
+  let actions = {};
+  let clock = new THREE.Clock();
+  let mouseX = 0;
+  let mouseY = 0;
+  let targetX = 0;
+  let targetY = 0;
+  let windowHalfX = window.innerWidth / 2;
+  let windowHalfY = window.innerHeight / 2;
+  let hasGyro = false;
+  
+  // Particle system for background
+  function createParticles() {
+    const particleCount = 1000;
+    const particles = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    const colors = new Float32Array(particleCount * 3);
+    
+    const color1 = new THREE.Color(0x6C63FF);
+    const color2 = new THREE.Color(0xFF6584);
+    const color3 = new THREE.Color(0x00D9FF);
+    
+    for (let i = 0; i < particleCount; i++) {
+      // Position
+      positions[i * 3] = (Math.random() - 0.5) * 50;
+      positions[i * 3 + 1] = (Math.random() - 0.5) * 50;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 50;
+      
+      // Color
+      const colorChoice = Math.random();
+      let color;
+      
+      if (colorChoice < 0.33) color = color1;
+      else if (colorChoice < 0.66) color = color2;
+      else color = color3;
+      
+      colors[i * 3] = color.r;
+      colors[i * 3 + 1] = color.g;
+      colors[i * 3 + 2] = color.b;
+    }
+    
+    particles.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    particles.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    
+    const particleMaterial = new THREE.PointsMaterial({
+      size: 0.1,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8
+    });
+    
+    const particleSystem = new THREE.Points(particles, particleMaterial);
+    scene.add(particleSystem);
+    
+    return particleSystem;
+  }
+  
+  const particles = createParticles();
+  
+  // Create floating 3D objects
+  function createFloatingObjects() {
+    const objects = [];
+    
+    // Create abstract geometries
+    const geometries = [
+      new THREE.TorusGeometry(1, 0.3, 16, 32),
+      new THREE.OctahedronGeometry(1, 0),
+      new THREE.IcosahedronGeometry(1, 0),
+      new THREE.TetrahedronGeometry(1, 0)
+    ];
+    
+    const materials = [
+      new THREE.MeshStandardMaterial({ 
+        color: 0x6C63FF, 
+        metalness: 0.3,
+        roughness: 0.4,
+        emissive: 0x6C63FF,
+        emissiveIntensity: 0.2
+      }),
+      new THREE.MeshStandardMaterial({ 
+        color: 0xFF6584, 
+        metalness: 0.3,
+        roughness: 0.4,
+        emissive: 0xFF6584,
+        emissiveIntensity: 0.2
+      }),
+      new THREE.MeshStandardMaterial({ 
+        color: 0x00D9FF, 
+        metalness: 0.3,
+        roughness: 0.4,
+        emissive: 0x00D9FF,
+        emissiveIntensity: 0.2
+      })
+    ];
+    
+    // Create objects with random positions
+    for (let i = 0; i < 10; i++) {
+      const geometry = geometries[Math.floor(Math.random() * geometries.length)];
+      const material = materials[Math.floor(Math.random() * materials.length)];
+      
+      const object = new THREE.Mesh(geometry, material);
+      
+      // Position objects in a sphere around the center
+      const radius = 10 + Math.random() * 10;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.random() * Math.PI;
+      
+      object.position.x = radius * Math.sin(phi) * Math.cos(theta);
+      object.position.y = radius * Math.sin(phi) * Math.sin(theta);
+      object.position.z = radius * Math.cos(phi);
+      
+      // Random scale
+      const scale = 0.2 + Math.random() * 0.5;
+      object.scale.set(scale, scale, scale);
+      
+      // Store initial position for animation
+      object.userData.initialPosition = object.position.clone();
+      object.userData.rotationSpeed = {
+        x: Math.random() * 0.01,
+        y: Math.random() * 0.01,
+        z: Math.random() * 0.01
+      };
+      
+      scene.add(object);
+      objects.push(object);
+    }
+    
+    return objects;
+  }
+  
+  const floatingObjects = createFloatingObjects();
+  
+  // 3D Text
+  function create3DText() {
+    // We'll use a placeholder for 3D text since it requires font loading
+    // In a real implementation, you'd use TextGeometry from Three.js
+    const textGeometry = new THREE.PlaneGeometry(5, 1);
+    const textMaterial = new THREE.MeshBasicMaterial({ 
+      color: 0xffffff,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide
+    });
+    
+    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+    textMesh.position.set(0, 2, -5);
+    scene.add(textMesh);
+    
+    return textMesh;
+  }
+  
+  const text3D = create3DText();
+  
+  // Create a placeholder 3D character
+  // In a real implementation, you'd load a GLTF model
+  function createPlaceholderCharacter() {
+    const group = new THREE.Group();
+    
+    // Head
+    const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+    const headMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0xFFD700,
+      metalness: 0.3,
+      roughness: 0.4,
+      emissive: 0xFFD700,
+      emissiveIntensity: 0.2
+    });
+    const head = new THREE.Mesh(headGeometry, headMaterial);
+    group.add(head);
+    
+    // Eyes
+    const eyeGeometry = new THREE.SphereGeometry(0.1, 32, 16);
+    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    
+    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    leftEye.position.set(-0.2, 0.1, 0.4);
+    group.add(leftEye);
+    
+    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+    rightEye.position.set(0.2, 0.1, 0.4);
+    group.add(rightEye);
+    
+    // Body
+    const bodyGeometry = new THREE.CylinderGeometry(0.3, 0.5, 1, 32);
+    const bodyMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x6C63FF,
+      metalness: 0.3,
+      roughness: 0.4
+    });
+    const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+    body.position.y = -0.75;
+    group.add(body);
+    
+    // Arms
+    const armGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.8, 32);
+    const armMaterial = new THREE.MeshStandardMaterial({ 
+      color: 0x6C63FF,
+      metalness: 0.3,
+      roughness: 0.4
+    });
+    
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    leftArm.position.set(-0.6, -0.5, 0);
+    leftArm.rotation.z = Math.PI / 4;
+    group.add(leftArm);
+    
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+    rightArm.position.set(0.6, -0.5, 0);
+    rightArm.rotation.z = -Math.PI / 4;
+    group.add(rightArm);
+    
+    // Position the character
+    group.position.set(0, 0, 0);
+    scene.add(group);
+    
+    // Add simple animations
+    const animateCharacter = () => {
+      // Breathing animation
+      const time = performance.now() * 0.001;
+      group.position.y = Math.sin(time * 2) * 0.1;
+      leftArm.rotation.z = Math.PI / 4 + Math.sin(time * 3) * 0.1;
+      rightArm.rotation.z = -Math.PI / 4 + Math.sin(time * 2.5) * 0.1;
+    };
+    
+    return { group, animateCharacter, leftEye, rightEye };
+  }
+  
+  const characterObj = createPlaceholderCharacter();
+  character = characterObj.group;
+  
+  // Setup mouse move event
+  document.addEventListener('mousemove', onMouseMove);
+  
+  function onMouseMove(event) {
+    mouseX = (event.clientX - windowHalfX) / 100;
+    mouseY = (event.clientY - windowHalfY) / 100;
+  }
+  
+  // Setup gyroscope if available
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', onDeviceOrientation);
+  }
+  
+  function onDeviceOrientation(event) {
+    if (event.beta && event.gamma) {
+      hasGyro = true;
+      targetY = event.beta * 0.1;  // -180 to 180 (front/back tilt)
+      targetX = event.gamma * 0.1; // -90 to 90 (left/right tilt)
+    }
+  }
+  
+  // Handle window resize
+  window.addEventListener('resize', onWindowResize);
+  
+  function onWindowResize() {
+    windowHalfX = window.innerWidth / 2;
+    windowHalfY = window.innerHeight / 2;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  }
+  
+  // Scroll event for character reactions
+  let scrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const newScrollY = window.scrollY;
+    const scrollDirection = newScrollY > scrollY ? 'down' : 'up';
+    scrollY = newScrollY;
+    
+    // Make character look up or down based on scroll direction
+    if (character) {
+      const targetRotationX = scrollDirection === 'down' ? 0.3 : -0.3;
+      gsap.to(character.rotation, {
+        x: targetRotationX,
+        duration: 0.5,
+        ease: 'power2.out'
+      });
+    }
+  });
+  
+  // Click handler for character interaction
+  canvas.addEventListener('click', () => {
+    // Make character react with surprise
+    if (character) {
+      // Scale up and down quickly
+      gsap.to(character.scale, {
+        x: 1.2,
+        y: 1.2,
+        z: 1.2,
+        duration: 0.1,
+        ease: 'power2.out',
+        onComplete: () => {
+          gsap.to(character.scale, {
+            x: 1,
+            y: 1,
+            z: 1,
+            duration: 0.2,
+            ease: 'elastic.out(1, 0.3)'
+          });
+        }
+      });
+    }
+  });
+  
+  // Chatbot functionality
+  if (chatButton) {
+    chatButton.addEventListener('click', () => {
+      chatbox.classList.remove('hidden');
+    });
+  }
+  
+  if (closeChat) {
+    closeChat.addEventListener('click', () => {
+      chatbox.classList.add('hidden');
+    });
+  }
+  
+  // Simple chat functionality
+  function sendChatMessage() {
+    const message = chatInput.value.trim();
+    if (!message) return;
+    
+    // Add user message
+    const userMessage = document.createElement('div');
+    userMessage.className = 'flex items-start gap-2 justify-end';
+    userMessage.innerHTML = `
+      <div class="bg-primary-color/30 rounded-lg p-3 text-sm max-w-[80%]">
+        <p>${message}</p>
+      </div>
+      <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">You</div>
+    `;
+    chatMessages.appendChild(userMessage);
+    
+    // Clear input
+    chatInput.value = '';
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Simulate AI response (in real implementation, this would call an API)
+    setTimeout(() => {
+      const responses = [
+        "Thanks for reaching out! I'd love to discuss your project in detail.",
+        "That sounds interesting! Can you tell me more about what you're looking for?",
+        "I specialize in creating interactive 3D experiences. How can I help with your project?",
+        "Feel free to check out my portfolio for examples of my previous work.",
+        "I'm currently available for new projects. Would you like to schedule a call?"
+      ];
+      
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+      
+      const aiMessage = document.createElement('div');
+      aiMessage.className = 'flex items-start gap-2';
+      aiMessage.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-primary-color flex items-center justify-center text-xs font-bold">AI</div>
+        <div class="bg-white/20 rounded-lg p-3 text-sm max-w-[80%]">
+          <p>${randomResponse}</p>
+        </div>
+      `;
+      chatMessages.appendChild(aiMessage);
+      
+      // Scroll to bottom
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      
+      // Make character react
+      if (character) {
+        gsap.to(character.rotation, {
+          y: character.rotation.y + Math.PI * 2,
+          duration: 1,
+          ease: 'power2.out'
+        });
+      }
+    }, 1000);
+  }
+  
+  if (sendMessage) {
+    sendMessage.addEventListener('click', sendChatMessage);
+  }
+  
+  if (chatInput) {
+    chatInput.addEventListener('keypress', (event) => {
+      if (event.key === 'Enter') {
+        sendChatMessage();
+      }
+    });
+  }
+  
+  // Animation loop
+  function animate() {
+    requestAnimationFrame(animate);
+    
+    const delta = clock.getDelta();
+    
+    // Update character animations
+    if (mixer) {
+      mixer.update(delta);
+    }
+    
+    // Update character orientation based on mouse/gyro
+    if (character) {
+      // Use gyro if available, otherwise use mouse
+      const inputX = hasGyro ? targetX : mouseX;
+      const inputY = hasGyro ? targetY : mouseY;
+      
+      // Smooth follow
+      character.rotation.y += (inputX * 0.5 - character.rotation.y) * 0.05;
+      character.rotation.x += (inputY * 0.3 - character.rotation.x) * 0.05;
+      
+      // Update character's animated parts
+      characterObj.animateCharacter();
+      
+      // Make eyes follow mouse
+      if (characterObj.leftEye && characterObj.rightEye) {
+        characterObj.leftEye.position.x = -0.2 + inputX * 0.05;
+        characterObj.leftEye.position.y = 0.1 + inputY * 0.05;
+        
+        characterObj.rightEye.position.x = 0.2 + inputX * 0.05;
+        characterObj.rightEye.position.y = 0.1 + inputY * 0.05;
+      }
+    }
+    
+    // Animate particles
+    if (particles) {
+      particles.rotation.y += 0.0005;
+      particles.rotation.x += 0.0002;
+    }
+    
+    // Animate floating objects
+    floatingObjects.forEach((object, i) => {
+      const time = Date.now() * 0.001;
+      const initialPos = object.userData.initialPosition;
+      
+      // Floating animation
+      object.position.y = initialPos.y + Math.sin(time * (0.5 + i * 0.1)) * 0.5;
+      
+      // Rotation
+      object.rotation.x += object.userData.rotationSpeed.x;
+      object.rotation.y += object.userData.rotationSpeed.y;
+      object.rotation.z += object.userData.rotationSpeed.z;
+      
+      // React to mouse movement (subtle attraction/repulsion)
+      if (!hasGyro) {
+        const distanceFactorX = mouseX / windowHalfX * 0.05;
+        const distanceFactorY = mouseY / windowHalfY * 0.05;
+        
+        object.position.x += distanceFactorX * (i % 2 === 0 ? 1 : -1);
+        object.position.z += distanceFactorY * (i % 2 === 0 ? 1 : -1);
+      }
+    });
+    
+    // Update controls
+    controls.update();
+    
+    // Render scene with post-processing
+    composer.render();
+  }
+  
+  // Initialize and start animation
+  function init() {
+    let isLoaded = false;
+
+    // Force hide loading screen after a maximum timeout (safety measure)
+    setTimeout(() => {
+      if (!isLoaded) {
+        hideLoadingScreen();
+        console.log('Forced loading screen hide after timeout');
+      }
+    }, 5000);
+
+    // Simulate loading progress
+    let progress = 0;
+    const loadingInterval = setInterval(() => {
+      progress += Math.random() * 10;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(loadingInterval);
+        isLoaded = true;
+
+        // Hide loading screen
+        hideLoadingScreen();
+      }
+
+      if (progressBar) {
+        progressBar.style.width = `${progress}%`;
+      }
+
+      if (loadingText) {
+        const messages = [
+          "Loading 3D Environment...",
+          "Preparing Character...",
+          "Setting up Physics...",
+          "Initializing Animations...",
+          "Almost Ready..."
+        ];
+
+        const messageIndex = Math.min(
+          Math.floor(progress / 20),
+          messages.length - 1
+        );
+
+        loadingText.textContent = messages[messageIndex];
+      }
+    }, 150);
+
+    // Start animation loop
+    animate();
+  }
+
+  function hideLoadingScreen() {
+    if (loadingScreen) {
+      loadingScreen.style.opacity = '0';
+      setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        console.log('Loading screen hidden');
+      }, 500);
+    }
+  }
+
+  // Start everything
+  init();
+
+  // Add a direct check to ensure loading screen is hidden
+  window.addEventListener('load', () => {
+    setTimeout(() => {
+      hideLoadingScreen();
+    }, 2000);
+  });
+</script>
+
+      <!-- <a href="https://www.buildglare.com" 
+     target="_blank" 
+     rel="noopener" 
+     class="fixed bottom-4 right-4 z-10 flex items-center gap-1.5 py-1.5 px-2.5 rounded-full text-xs font-medium bg-white/80 backdrop-blur-sm shadow-sm border border-slate-200/40 text-slate-600 transition-all duration-300 hover:translate-y-[-1px] group">
+    <span class="font-light">Built on</span>
+    <span class="bg-clip-text text-transparent bg-gradient-to-r from-sky-500 to-violet-500 font-semibold tracking-wide">
+      Buildglare
+    </span>
+  </a> -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/vcd15cbe7772f49c399c6a5babf22c1241717689176015" integrity="sha512-ZpsOmlRQV6y907TI0dKBHq9Md29nnaEIPlkf84rnaERnq6zvWvPUqr2ft8M1aS28oN72PdrCzSjY4U6VaAw1EQ==" data-cf-beacon='{"rayId":"92678f82aff6ef69","version":"2025.1.0","r":1,"token":"5ecc47f9e6f5462b8a8ea8cf28e1760b","serverTiming":{"name":{"cfExtPri":true,"cfL4":true,"cfSpeedBrain":true,"cfCacheStatus":true}}}' crossorigin="anonymous"></script>
+</body>
+</html>
